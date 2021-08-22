@@ -8,13 +8,20 @@ This project is a preliminary research for solutions that can be developed for t
 
 Two Convolutional Neural Networks are trained and evaluated - ResNet50 (2015) and EfficientNetB4 (2019). The idea is to use transfer learning and achieve promising results with popular and free tools - Python, Tensorflow, Kaggle datasets and Google Colab. The goal is to develop a working CNN model, that solves the classification problem of waste in 5 categories: cardboard, glass, paper, metal and plastic.
 
+## Dataset
+The Garbage Classification Dataset contains 6 classifications: cardboard (393), glass (491), metal (400), paper(584), plastic (472) and trash(127).\
+https://www.kaggle.com/asdasdasasdas/garbage-classification
+
+'trash' category samples were dropped out as it contains significantly less samples than other categories and does not provide useful information in waste sergregation process.
+Train/test division was rearranged so that each category contains 100 samples for testing. This results in ~20% train/test split size. Data augmenation is used in order to generate more samples for learning process.
 ## Model performance
-
-**ResNet50** accuracy score: 0.678
-
+**ResNet50** accuracy score: 0.678\
 **EfficientNetB4** accuracy score: 0.898
 
+![alt text](cnf_mtrx.png)
 EfficientNetB4 confusion matrix and categorical accuracy
 
-
 ## Classification samples
+
+Achieved examples of good classification, sufficient classification and misclassification.
+![alt text](samples.png)
