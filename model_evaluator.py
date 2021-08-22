@@ -4,7 +4,7 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
 
 class ModelEvaluator:
 
@@ -54,6 +54,23 @@ class ModelEvaluator:
         ax[1].set_xlim([0, 1])
 
         plt.show()
+
+    @staticmethod
+    def predict_for_image(model=None, preprocessing_function=None, data_dir=None, img_path=None):
+        datagen = ImageDataGenerator(preprocessing_function=preprocessing_function)
+        generator = datagen.flow_from_directory(directory=data_dir)
+        image = load_img(os.path.join(data_dir, img_path))
+        plt.imshow(image)
+        plt.show()
+
+        image_arr = img_to_array(image)
+        image_arr = image_arr.reshape((1, image_arr.shape[0], image_arr.shape[1], image_arr.shape[2]))
+        image_arr = preprocessing_function(image_arr)
+
+        pred = model.predict(image_arr)
+
+        df = pd.DataFrame({'probability': pred[0]*100}, index=[k for k,v in generator.class_indices.items()])
+        return df.round(2).sort_values(by=['probability'], ascending=False)
 
     @staticmethod
     def categorical_classification(evaluators):

@@ -9,13 +9,9 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
 class TrainingPipe:
 
-    def __init__(self, image_shape=(384, 512, 3), batch_size=16, epochs=500):
+    def __init__(self, image_shape=(384, 512, 3), batch_size=16):
         self.image_shape=image_shape
         self.batch_size=batch_size
-        self.epochs=epochs
-
-        self.n_categories=0
-        self.n_train_samples=0
 
         self.train_generator=None
         self.val_generator=None
@@ -42,10 +38,6 @@ class TrainingPipe:
                                                     class_mode="categorical",
                                                     subset="validation")
 
-        self.n_categories = len(next(os.walk(data_dir))[1])
-        n_samples = sum([len(files) for *_, files in os.walk(data_dir)])
-        self.n_train_samples = round((1 - val_size) * n_samples)
-
     def show_samples(self):
         # generate samples and plot
         fig, ax = plt.subplots(nrows=1, ncols=min(self.batch_size,4), figsize=(15,15))
@@ -59,7 +51,7 @@ class TrainingPipe:
             ax[i].imshow(image[0])
             ax[i].axis('off')
 
-    def train_model(self, model_name, model=None, with_fine_tuning=True):
+    def train_model_auto(self, model_name, model=None, epochs=600, patience=30, save_freq=20, with_fine_tuning=True, epochs_ft=50, patience_ft=10, save_freq_ft=5):
         #Freeze filter layer
         model.layers[0].trainable = False
 
@@ -69,7 +61,7 @@ class TrainingPipe:
                             metrics=["accuracy"])
 
         early_stopping = EarlyStopping(monitor="val_accuracy",
-                                       patience=20,
+                                       patience=patience,
                                        restore_best_weights=True)
 
         model_checkpoint = ModelCheckpoint('training/checkpoints/' + model_name + '_weights_best.h5',
@@ -78,13 +70,13 @@ class TrainingPipe:
                                            verbose=1,
                                            save_best_only=True,
                                            save_weights_only=True,
-                                           save_freq=20*self.train_generator.samples//self.batch_size)
+                                           save_freq=save_freq*self.train_generator.samples//self.batch_size)
 
         history1 = model.fit(x=self.train_generator,
                                  steps_per_epoch=self.train_generator.samples//self.batch_size,
                                  validation_data=self.val_generator,
                                  batch_size=self.batch_size,
-                                 epochs=self.epochs,
+                                 epochs=epochs,
                                  callbacks=[early_stopping, model_checkpoint])
 
         model.save(f'training/models/{model_name.replace(" ","")}')
@@ -95,11 +87,11 @@ class TrainingPipe:
             model.layers[0].trainable = True
             #Compile and fit model
             model.compile(loss="categorical_crossentropy", 
-                               optimizer=Adam(1e-5), #low rearning rate for fine-tuning
+                               optimizer=Adam(1e-5), #low learning rate for fine-tuning
                                metrics=["accuracy"])
             
             early_stopping = EarlyStopping(monitor="val_accuracy",
-                                       patience=5,
+                                       patience=patience_ft,
                                        restore_best_weights=True)
 
             model_checkpoint = ModelCheckpoint('training/checkpoints/' + model_name + '_fine_tuning_weights_best.h5',
@@ -108,13 +100,13 @@ class TrainingPipe:
                                                 verbose=1,
                                                 save_best_only=True,
                                                 save_weights_only=True,
-                                                save_freq=5*self.train_generator.samples//self.batch_size)
+                                                save_freq=save_freq_ft*self.train_generator.samples//self.batch_size)
 
             history2 = model.fit(x=self.train_generator,
                                      steps_per_epoch=self.train_generator.samples//self.batch_size,
                                      validation_data=self.val_generator,
                                      batch_size=self.batch_size,
-                                     epochs=50,
+                                     epochs=epochs_ft,
                                      callbacks=[early_stopping, model_checkpoint])
             
             model.save(f'training/models/{model_name.replace(" ","")}_fine_tuning')
@@ -124,7 +116,42 @@ class TrainingPipe:
         if with_fine_tuning:   
             self.plot_history(model_name+' fine tuning', history2)
 
-            
+    def train_model(self, model_name, model=None, epochs=600, patience=30, save_freq=20, fine_tuning=True):
+        #Freeze filter layer
+        if not fine_tuning:
+            model.layers[0].trainable = False
+        else:
+            model.layers[0].trainable = True
+            model_name += "_fine_tuning"
+
+        #Compile and fit model
+        model.compile(loss="categorical_crossentropy", 
+                            optimizer="adam" if fine_tuning else Adam(1e-5), 
+                            metrics=["accuracy"])
+
+        early_stopping = EarlyStopping(monitor="val_accuracy",
+                                       patience=patience,
+                                       restore_best_weights=True)
+
+        model_checkpoint = ModelCheckpoint('training/checkpoints/' + model_name + '_weights_best.h5',
+                                           monitor='val_accuracy',
+                                           mode='max',
+                                           verbose=1,
+                                           save_best_only=True,
+                                           save_weights_only=True,
+                                           save_freq=save_freq*self.train_generator.samples//self.batch_size)
+
+        history = model.fit(x=self.train_generator,
+                                 steps_per_epoch=self.train_generator.samples//self.batch_size,
+                                 validation_data=self.val_generator,
+                                 batch_size=self.batch_size,
+                                 epochs=epochs,
+                                 callbacks=[early_stopping, model_checkpoint])
+
+        model.save(f'training/models/{model_name.replace(" ","")}')
+
+        print('\n\n')
+        self.plot_history(model_name, history)
 
     def plot_history(self, model_name, history):
         
