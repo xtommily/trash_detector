@@ -12,7 +12,7 @@ Two Convolutional Neural Networks are trained and evaluated - ResNet50 (2015) an
 The Garbage Classification Dataset contains 6 classifications: cardboard (393), glass (491), metal (400), paper(584), plastic (472) and trash(127).\
 https://www.kaggle.com/asdasdasasdas/garbage-classification
 
-'trash' category samples were dropped out as it contains significantly less samples than other categories and does not provide useful information in waste sergregation process.
+'trash' category was dropped out as it contained significantly less samples than other categories and did not provide any useful information in waste sergregation process.
 Train/test division was rearranged so that each category contains 100 samples for testing. This results in ~20% train/test split size. Data augmenation is used in order to generate more samples for learning process.
 ## Model performance
 **ResNet50** accuracy score: 0.678\
